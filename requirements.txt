@@ -4,6 +4,7 @@ Django==4.2
 django-cors-headers==3.14.0
 dnspython==2.3.0
 gunicorn==20.1.0
+certifi==2022.12.7
 pymongo==4.3.3
 sqlparse==0.4.4
 typing_extensions==4.5.0
