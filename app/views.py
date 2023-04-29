@@ -20,14 +20,9 @@ def _get_db() -> Database:
     client = MongoClient(uri, tlsCAFile=certifi.where())
     try:
         client.admin.command('ping')
-        print("Pinged your deployment. You successfully connected to MongoDB!")
     except Exception as e:
-        print(e)
+        print("Error occured on database connection: " + e)
     return client.get_database("bloodbank")
-
-def main_page(request):
-    context = { }
-    return render(request, "index.html", context)
 
 @api_view(['GET', 'POST'])
 def dataroute(request):
@@ -46,9 +41,9 @@ def dataroute(request):
         return  HttpResponse(status=200)
         
 @api_view(['DELETE'])
-def deleteroute(request,id):
+def deleteroute(request, object_id):
     if request.method == 'DELETE':
         client = _get_db();
         collection = client['task']
-        result = client.db.collection.delete_one({'id': id})
+        collection.delete_one({'_id': ObjectId(object_id)})
         return  HttpResponse(status=200)

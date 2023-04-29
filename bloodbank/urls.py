@@ -16,13 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from app.views import main_page
 from app.views import dataroute
 from app.views import deleteroute
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("", main_page, name="main_page"),
     path('api/tasks/',dataroute,name="tasks"),
-    path('api/tasks/<int:id>/',deleteroute,name="deleteroute")
+    path('api/tasks/<str:object_id>/',deleteroute,name="deleteroute")
 ]
