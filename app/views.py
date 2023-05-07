@@ -161,7 +161,7 @@ def donate_to_blood_request_draft(request, blood_request_id):
             <h1>Contact Information for {request_body['name']} {request_body['surname']}</h1>
             <p><strong>Address:</strong> {request_body['address']}</p>
             <p><strong>Phone:</strong> {request_body['gsm']}</p>
-            <p><strong>Email:</strong> {request_body['email']}</p>
+            <p><strong>Email:</strong> {request_body['email_address']}</p>
           </body>
         </html>
     """
