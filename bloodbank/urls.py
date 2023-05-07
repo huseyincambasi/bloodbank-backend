@@ -28,8 +28,18 @@ urlpatterns = [
         name="get all blood requests"
     ),
     path(
-        'api/blood_requests/<str:id>',
+        'api/blood_requests/<str:blood_request_id>',
         views.get_blood_request_details,
         name="fetch all attributes of an blood_request"
+    ),
+    path(
+        'api/blood_requests/<str:blood_request_id>/donate',
+        views.donate_to_blood_request,
+        name="donate to blood request"
+    ),
+    path(
+        'api/blood_requests/<str:blood_request_id>/donate/validate',
+        views.validate_to_blood_request,
+        name="get validation for blood request"
     ),
 ]
