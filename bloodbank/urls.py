@@ -38,6 +38,11 @@ urlpatterns = [
         name="donate to blood request"
     ),
     path(
+        'api/blood_requests/<str:blood_request_id>/donate_draft',
+        views.donate_to_blood_request_draft,
+        name="donate to blood request"
+    ),
+    path(
         'api/blood_requests/<str:blood_request_id>/donate/validate',
         views.validate_to_blood_request,
         name="get validation for blood request"
