@@ -38,7 +38,7 @@ urlpatterns = [
         name="donate to blood request"
     ),
     path(
-        'api/blood_requests/<str:blood_request_id>/donate_draft',
+        'api/blood_requests/donate_draft/<str:blood_request_id>/',
         views.donate_to_blood_request_draft,
         name="donate to blood request"
     ),
