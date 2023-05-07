@@ -49,6 +49,13 @@ def get_blood_requests(request):
         )
     return JsonResponse(data=blood_requests_resp, status=200, safe=False)
 
+@api_view(['POST'])
+def post_blood_requests(request):
+    client = _get_db()
+    collection = client['blood_requests']
+    data=json.loads(request.body)
+    collection.insert_one(data)
+    return  HttpResponse(status=200)
 
 @api_view(['GET'])
 def get_blood_request_details(request, id):
@@ -58,28 +65,9 @@ def get_blood_request_details(request, id):
     blood_request["_id"] = str(blood_request["_id"])
     return JsonResponse(data=blood_request, status=200)
 
-
-@api_view(['GET', 'POST'])
-def dataroute(request):
-    if request.method == 'GET':
-        client = _get_db()
-        collection = client['task']
-        cursor = collection.find({})
-        json_data = dumps(list(cursor))
-        return HttpResponse(json_data,content_type="application/json")
-
-    if request.method == 'POST':
-        client = _get_db()
-        collection = client['task']
-        data=json.loads(request.body)
-        collection.insert_one(data)
-        return  HttpResponse(status=200)
-
-
 @api_view(['DELETE'])
-def deleteroute(request, object_id):
-    if request.method == 'DELETE':
-        client = _get_db()
-        collection = client['task']
-        collection.delete_one({'_id': ObjectId(object_id)})
-        return HttpResponse(status=200)
+def delete_blood_request(request, object_id):
+    client = _get_db()
+    collection = client['blood_requests']
+    collection.delete_one({'_id': ObjectId(object_id)})
+    return HttpResponse(status=200)

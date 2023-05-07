@@ -20,16 +20,8 @@ import app.views as views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/tasks/', views.dataroute,name="tasks"),
-    path('api/tasks/<str:object_id>/', views.deleteroute,name="deleteroute"),
-    path(
-        'api/blood_requests',
-        views.get_blood_requests,
-        name="get all blood requests"
-    ),
-    path(
-        'api/blood_requests/<str:id>',
-        views.get_blood_request_details,
-        name="fetch all attributes of an blood_request"
-    ),
+    path('api/blood_requests/', views.get_blood_requests, name="get all blood requests"),
+    path('api/blood_requests/', views.post_blood_requests, name="post blood requests"),
+    path('api/blood_requests/<str:id>', views.get_blood_request_details, name="fetch all attributes of an blood_request"),
+    path('api/blood_requests/<str:id>', views.delete_blood_request, name="delete blood_request"),
 ]
