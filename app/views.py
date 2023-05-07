@@ -96,6 +96,23 @@ def get_blood_request_details(request, blood_request_id):
     return JsonResponse(data=blood_request, status=200)
 
 
+@api_view(['POST'])
+def add_blood_request(request):
+    client = _get_db()
+    collection = client['blood_requests']
+    data = json.loads(request.body)
+    collection.insert_one(data)
+    return HttpResponse(status=200)
+
+
+@api_view(['DELETE'])
+def delete_blood_request(request, object_id):
+    client = _get_db()
+    collection = client['blood_requests']
+    collection.delete_one({'_id': ObjectId(object_id)})
+    return HttpResponse(status=200)
+
+
 @api_view(['GET'])
 def donate_to_blood_request(request, blood_request_id):
     client = _get_db()

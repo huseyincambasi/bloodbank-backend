@@ -22,6 +22,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/tasks/', views.dataroute,name="tasks"),
     path('api/tasks/<str:object_id>/', views.deleteroute,name="deleteroute"),
+    path('api/add_blood_request/', views.add_blood_request, name="add blood request"),
+    path('api/blood_request/<str:id>', views.delete_blood_request, name="delete blood_request"),
     path(
         'api/blood_requests',
         views.get_blood_requests,
