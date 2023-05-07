@@ -23,7 +23,7 @@ urlpatterns = [
     path('api/add_blood_request/', views.add_blood_request, name="add blood request"),
     path('api/blood_request/<str:id>', views.delete_blood_request, name="delete blood_request"),
     path(
-        'api/blood_requests',
+        'api/blood_requests/',
         views.get_blood_requests,
         name="get all blood requests"
     ),
