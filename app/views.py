@@ -116,7 +116,6 @@ def validate_to_blood_request(request, blood_request_id):
     blood_product_type = blood_request["blood_product_type"]
     coll = client.get_collection("validation_forms")
     validation_form = coll.find({"blood_product_type": blood_product_type}).next()
-    response = None
     request_body = request.body
     if validation_form == request["validation_form"]:
         response = JsonResponse(
@@ -145,6 +144,33 @@ def validate_to_blood_request(request, blood_request_id):
         )
 
     return response
+
+
+@api_view(['GET', 'POST'])
+def donate_to_blood_request_draft(request, blood_request_id):
+    client = _get_db()
+    coll = client.get_collection("blood_requests")
+    blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
+    request_body = request.body
+    mail_body = f"""
+        <html>
+          <head>
+            <meta charset="UTF-8">
+          </head>
+          <body>
+            <h1>Contact Information for {request_body['name']} {request_body['surname']}</h1>
+            <p><strong>Address:</strong> {request_body['address']}</p>
+            <p><strong>Phone:</strong> {request_body['gsm']}</p>
+            <p><strong>Email:</strong> {request_body['email']}</p>
+          </body>
+        </html>
+    """
+    send_mail(
+        to_whom=blood_request["email_address"],
+        subject="Donor Found!!!", body=mail_body
+    )
+
+    return HttpResponse(status=200)
 
 
 @api_view(['GET', 'POST'])
