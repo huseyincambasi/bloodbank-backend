@@ -168,7 +168,8 @@ def donate_to_blood_request_draft(request, blood_request_id):
     client = _get_db()
     coll = client.get_collection("blood_requests")
     blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
-    request_body = request.body
+    request_body = json.loads(request.body)
+    print(request_body);
     mail_body = f"""
         <html>
           <head>
