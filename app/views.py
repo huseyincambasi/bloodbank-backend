@@ -146,7 +146,7 @@ def validate_to_blood_request(request, blood_request_id):
     return response
 
 
-@api_view(['GET', 'POST'])
+@api_view(['POST'])
 def donate_to_blood_request_draft(request, blood_request_id):
     client = _get_db()
     coll = client.get_collection("blood_requests")
