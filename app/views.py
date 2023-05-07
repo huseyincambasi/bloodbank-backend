@@ -188,29 +188,3 @@ def donate_to_blood_request_draft(request, blood_request_id):
     )
 
     return HttpResponse(status=200)
-
-
-@api_view(['GET', 'POST'])
-def dataroute(request):
-    if request.method == 'GET':
-        client = _get_db()
-        collection = client['task']
-        cursor = collection.find({})
-        json_data = dumps(list(cursor))
-        return HttpResponse(json_data,content_type="application/json")
-
-    if request.method == 'POST':
-        client = _get_db()
-        collection = client['task']
-        data=json.loads(request.body)
-        collection.insert_one(data)
-        return  HttpResponse(status=200)
-
-
-@api_view(['DELETE'])
-def deleteroute(request, object_id):
-    if request.method == 'DELETE':
-        client = _get_db()
-        collection = client['task']
-        collection.delete_one({'_id': ObjectId(object_id)})
-        return HttpResponse(status=200)

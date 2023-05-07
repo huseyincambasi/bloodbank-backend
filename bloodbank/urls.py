@@ -20,8 +20,6 @@ import app.views as views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/tasks/', views.dataroute,name="tasks"),
-    path('api/tasks/<str:object_id>/', views.deleteroute,name="deleteroute"),
     path('api/add_blood_request/', views.add_blood_request, name="add blood request"),
     path('api/blood_request/<str:id>', views.delete_blood_request, name="delete blood_request"),
     path(
@@ -30,7 +28,7 @@ urlpatterns = [
         name="get all blood requests"
     ),
     path(
-        'api/blood_requests/<str:blood_request_id>',
+        'api/blood_request/<str:blood_request_id>',
         views.get_blood_request_details,
         name="fetch all attributes of an blood_request"
     ),
@@ -40,7 +38,7 @@ urlpatterns = [
         name="donate to blood request"
     ),
     path(
-        'api/blood_requests/donate_draft/<str:blood_request_id>/',
+        'api/blood_request/donate_draft/<str:blood_request_id>/',
         views.donate_to_blood_request_draft,
         name="donate to blood request"
     ),
