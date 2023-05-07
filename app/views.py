@@ -50,7 +50,7 @@ def get_blood_requests(request):
     return JsonResponse(data=blood_requests_resp, status=200, safe=False)
 
 @api_view(['POST'])
-def post_blood_requests(request):
+def add_blood_request(request):
     client = _get_db()
     collection = client['blood_requests']
     data=json.loads(request.body)
