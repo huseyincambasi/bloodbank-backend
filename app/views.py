@@ -82,7 +82,8 @@ def get_blood_requests(request):
                 "city": blood_request["city"],
                 "district": blood_request["district"],
                 "contact_gsm": blood_request["contact_gsm"],
-                "email_address": blood_request["email_address"]
+                "email_address": blood_request["email_address"],
+                "blood_group": blood_request["blood_group"] if "blood_group" in blood_request else ""
             }
         )
     return JsonResponse(data=blood_requests_resp, status=200, safe=False)
