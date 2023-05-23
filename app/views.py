@@ -1,6 +1,7 @@
 from typing import List, Union
 from functools import lru_cache
 import certifi
+import hashlib
 from bson.json_util import dumps
 from bson import ObjectId
 import json
@@ -20,6 +21,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from django_jwt_extended import create_access_token
+from django_jwt_extended import create_refresh_token
 
 @lru_cache(maxsize=1, typed=False)
 def _get_db() -> Database:
@@ -64,6 +67,44 @@ def send_mail(
     server.login(username, password)
     server.sendmail(sender, to_whom, msg.as_string())
     server.close()
+
+@api_view(['POST'])
+def register(request):
+    db = _get_db()
+    users_collection = db.get_collection("users")
+    new_user = json.loads(request.body)
+    new_user["password"] = hashlib.sha256(new_user["password"].encode("utf-8")).hexdigest()
+    doc = users_collection.find_one({"email": new_user["email"]})
+    
+    if not doc:
+        users_collection.insert_one(new_user)
+        del new_user['password']
+        return JsonResponse(data=new_user, status=201, safe=False)
+    else:
+        return JsonResponse(data={'error': 'Email address already exists'}, status=409, safe=False)
+    
+@api_view(['POST'])
+def login(request):
+    db = _get_db()
+    users_collection = db.get_collection("users")
+    login_details = json.loads(request.body)
+    user_from_db = users_collection.find_one({'email': login_details['email']})
+    
+    if user_from_db:
+        encrpted_password = hashlib.sha256(login_details['password'].encode("utf-8")).hexdigest()
+        if encrpted_password == user_from_db['password']:
+            del user_from_db['password']
+            user_from_db['_id'] = str(user_from_db['_id'])
+            return JsonResponse(
+                data={
+                    "access_token": create_access_token(identity=user_from_db['email']),
+                    'refresh_token': create_refresh_token(identity=user_from_db['email']),
+                    'user': user_from_db
+                },
+                status=200,
+                safe=False
+            );
+    return JsonResponse(data={'error': 'Incorrect email address or password'}, status=401, safe=False)
 
 
 @api_view(['GET'])
