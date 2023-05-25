@@ -72,13 +72,14 @@ def send_mail(
 def register(request):
     db = _get_db()
     users_collection = db.get_collection("users")
-    new_user = json.loads(request.body)
-    new_user["password"] = hashlib.sha256(new_user["password"].encode("utf-8")).hexdigest()
-    doc = users_collection.find_one({"email": new_user["email"]})
+    new_user = json.loads(json.dumps(request.POST))
+    new_user['password'] = hashlib.sha256(new_user['password'].encode('utf-8')).hexdigest()
+    doc = users_collection.find_one({'email': new_user['email']})
     
     if not doc:
         users_collection.insert_one(new_user)
         del new_user['password']
+        new_user['_id'] = str(new_user['_id'])
         return JsonResponse(data=new_user, status=201, safe=False)
     else:
         return JsonResponse(data={'error': 'Email address already exists'}, status=409, safe=False)
@@ -91,7 +92,7 @@ def login(request):
     user_from_db = users_collection.find_one({'email': login_details['email']})
     
     if user_from_db:
-        encrpted_password = hashlib.sha256(login_details['password'].encode("utf-8")).hexdigest()
+        encrpted_password = hashlib.sha256(login_details['password'].encode('utf-8')).hexdigest()
         if encrpted_password == user_from_db['password']:
             del user_from_db['password']
             user_from_db['_id'] = str(user_from_db['_id'])
