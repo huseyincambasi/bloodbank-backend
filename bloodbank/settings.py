@@ -76,7 +76,7 @@ TEMPLATES = [
         },
     },
 ]
-
+SESSION_ENGINE = 'django.contrib.sessions.backends.file'
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'https://bloodbank-qx6x.onrender.com'
