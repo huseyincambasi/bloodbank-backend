@@ -20,7 +20,31 @@ import app.views as views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/add_blood_request/', views.add_blood_request, name="add blood request"),
+    path(
+        'api/add_blood_request/',
+        views.add_blood_request,
+        name="add blood request"
+    ),
+    path(
+        'api/index',
+        views.index,
+        name="return user if logged in"
+    ),
+    path(
+        'api/register',
+        views.register,
+        name="registers user"
+    ),
+    path(
+        'api/login',
+        views.login,
+        name="logs in user"
+    ),
+    path(
+        'api/logout',
+        views.logout,
+        name="logs out user"
+    ),
     # path('api/blood_request/<str:id>', views.delete_blood_request, name="delete blood_request"),
     path(
         'api/blood_requests/',
