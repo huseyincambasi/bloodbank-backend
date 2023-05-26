@@ -31,7 +31,8 @@ def _get_db() -> Database:
     try:
         client.admin.command('ping')
     except Exception as e:
-        print("Error occured on database connection: " + e)
+        print("Error occurred on database connection: ")
+        raise e
     return client.get_database("test")
 
 
@@ -64,6 +65,69 @@ def send_mail(
     server.login(username, password)
     server.sendmail(sender, to_whom, msg.as_string())
     server.close()
+
+
+@api_view(['GET'])
+def index(request):
+    email = None
+    try:
+        email = request.session["user"]
+        return JsonResponse(data={"user": email}, status=200)
+    except KeyError:
+        return JsonResponse(data={"user": email}, status=200)
+
+
+@api_view(['POST'])
+def register(request):
+    db = _get_db()
+    coll = db.get_collection("users")
+    request_body = json.loads(request.body)
+    email = request_body["email"]
+    password = request_body["password"]
+    name = request_body["name"]
+    surname = request_body["surname"]
+    user_iter = coll.find({"email": email})
+    if len(password) < 8:
+        return HttpResponse(
+            content="password must be longer than 8 chars",
+            status=400
+        )
+    try:
+        user_iter.next()
+        return HttpResponse(content="user exists", status=400)
+    except StopIteration:
+        coll.insert_one(
+            {"name": name, "surname": surname, "email": email, "password": password}
+        )
+        return HttpResponse(status=200)
+
+
+@api_view(['POST'])
+def login(request):
+    db = _get_db()
+    coll = db.get_collection("users")
+    request_body = json.loads(request.body)
+    email = request_body["email"]
+    password = request_body["password"]
+    user_iter = coll.find({"email": email})
+    try:
+        user = user_iter.next()
+    except StopIteration:
+        return HttpResponse(content="user not found", status=400)
+
+    if password == user["password"]:
+        print("buradayım");
+        print(request.session)
+        request.session["user"] = user["email"]
+        return HttpResponse(status=200)
+    else:
+        return HttpResponse(content="password not true", status=400)
+
+
+@api_view(['POST'])
+def logout(request):
+    request.session["user"] = None
+    return HttpResponse(status=200)
 
 
 @api_view(['GET'])
@@ -171,7 +235,6 @@ def donate_to_blood_request_draft(request, blood_request_id):
     coll = client.get_collection("blood_requests")
     blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
     request_body = json.loads(request.body)
-    print(request_body);
     mail_body = f"""
         <html>
           <head>
