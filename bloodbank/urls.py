@@ -21,14 +21,9 @@ import app.views as views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path(
-        'api/add_blood_request/',
-        views.add_blood_request,
-        name="add blood request"
-    ),
-    path(
-        'api/index',
+        'api/index/',
         views.index,
-        name="return user if logged in"
+        name="return user info if logged in, else return null"
     ),
     path(
         'api/register',
@@ -41,18 +36,102 @@ urlpatterns = [
         name="logs in user"
     ),
     path(
+        'api/reset_password',
+        views.reset_password,
+        name="resets passwords and sends it via email"
+    ),
+    path(
+        'api/update_password',
+        views.update_password,
+        name="updates password"
+    ),
+    path(
         'api/logout',
         views.logout,
         name="logs out user"
     ),
-    # path('api/blood_request/<str:id>', views.delete_blood_request, name="delete blood_request"),
+    path(
+        'api/logout',
+        views.logout,
+        name="logs out user"
+    ),
+    path(
+        'api/user/info/',
+        views.user_info,
+        name="fetch all attributes of user info"
+    ),
+    path(
+        'api/user/donation_date',
+        views.user_update_donation_date,
+        name="user updates most recent donation date"
+    ),
+    path(
+        'api/user/city',
+        views.user_update_city,
+        name="user updates city"
+    ),
+    path(
+        'api/user/district',
+        views.user_update_district,
+        name="user updates district"
+    ),
+    path(
+        'api/user/phone',
+        views.user_update_phone,
+        name="user updates phone"
+    ),
+    path(
+        'api/user/city_district_phone',
+        views.user_update_city_district_phone,
+        name="user updates city district and phone"
+    ),
+    path(
+        'api/user/subscribe',
+        views.user_subscribe_or_unsubscribe,
+        name="user subscribes or unsubscribes to the email list"
+    ),
+    path(
+        'api/user/add_blood_request/',
+        views.user_add_blood_request,
+        name="add blood request"
+    ),
+    path(
+        'api/user/blood_requests/',
+        views.user_blood_requests,
+        name="get all blood requests belong to the user"
+    ),
+    path(
+        'api/user/blood_requests/<str:blood_request_id>/',
+        views.user_blood_request_details,
+        name="fetch all attributes of an blood_request"
+    ),
+    path(
+        'api/user/blood_requests/<str:blood_request_id>/update',
+        views.user_blood_request_details_update,
+        name="update any attribute of a blood request"
+    ),
+    path(
+        'api/user/blood_requests/<str:blood_request_id>/decrease',
+        views.user_blood_request_details_decrease_unit,
+        name="decrease blood request unit by 1"
+    ),
+    path(
+        'api/user/blood_requests/<str:blood_request_id>/increase',
+        views.user_blood_request_details_increase_unit,
+        name="increase blood request unit by 1"
+    ),
+    path(
+        'api/user/blood_requests/<str:blood_request_id>/delete',
+        views.user_blood_request_details_delete,
+        name="delete blood request"
+    ),
     path(
         'api/blood_requests/',
         views.get_blood_requests,
         name="get all blood requests"
     ),
     path(
-        'api/blood_request/<str:blood_request_id>',
+        'api/blood_request/<str:blood_request_id>/',
         views.get_blood_request_details,
         name="fetch all attributes of an blood_request"
     ),
