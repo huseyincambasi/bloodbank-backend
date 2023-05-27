@@ -19,11 +19,14 @@ from django.urls import include, path
 import app.views as views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(
+        'admin/',
+        admin.site.urls
+    ),
     path(
         'api/index/',
         views.index,
-        name="return user info if logged in, else return null"
+        name="return user email if logged in, else return null"
     ),
     path(
         'api/register',
@@ -44,11 +47,6 @@ urlpatterns = [
         'api/update_password',
         views.update_password,
         name="updates password"
-    ),
-    path(
-        'api/logout',
-        views.logout,
-        name="logs out user"
     ),
     path(
         'api/logout',
@@ -136,18 +134,18 @@ urlpatterns = [
         name="fetch all attributes of an blood_request"
     ),
     path(
+        'api/blood_requests/<str:blood_request_id>/questions/',
+        views.get_validation_questions,
+        name="get validation questions"
+    ),
+    path(
+        'api/blood_requests/<str:blood_request_id>/validate',
+        views.validate_donation,
+        name="checks if donor fits requirements"
+    ),
+    path(
         'api/blood_requests/<str:blood_request_id>/donate',
         views.donate_to_blood_request,
         name="donate to blood request"
-    ),
-    path(
-        'api/blood_request/donate_draft/<str:blood_request_id>/',
-        views.donate_to_blood_request_draft,
-        name="donate to blood request"
-    ),
-    path(
-        'api/blood_requests/<str:blood_request_id>/donate/validate',
-        views.validate_to_blood_request,
-        name="get validation for blood request"
-    ),
+    )
 ]
