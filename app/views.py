@@ -563,57 +563,44 @@ def get_blood_request_details(request, blood_request_id):
 
 
 @api_view(['GET'])
-def donate_to_blood_request(request, blood_request_id):
+def get_validation_questions(request, blood_request_id):
     client = _get_db()
     coll = client.get_collection("blood_requests")
     blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
     blood_product_type = blood_request["blood_product_type"]
-    coll = client.get_collection("validation_forms")
-    validation_form = coll.find({"blood_product_type": blood_product_type}).next()
-    validation_form["_id"] = str(validation_form["_id"])
-    return JsonResponse(data=validation_form, status=200)
+    coll = client.get_collection("validation")
+    validation = coll.find({"blood_product_type": blood_product_type}).next()
+    questions = {}
+    print(validation)
+    for key, val in validation.items():
+        if key.startswith("question_"):
+            questions[key] = val
 
-
-@api_view(['GET', 'POST'])
-def validate_to_blood_request(request, blood_request_id):
-    client = _get_db()
-    coll = client.get_collection("blood_requests")
-    blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
-    blood_product_type = blood_request["blood_product_type"]
-    coll = client.get_collection("validation_forms")
-    validation_form = coll.find({"blood_product_type": blood_product_type}).next()
-    data = request.body
-    if validation_form == request["validation_form"]:
-        response = JsonResponse(
-            data={"message": "donor fit requirements"}, status=200
-        )
-        mail_body = f"""
-            <html>
-              <head>
-                <meta charset="UTF-8">
-              </head>
-              <body>
-                <h1>Contact Information for {data['name']} {data['surname']}</h1>
-                <p><strong>Address:</strong> {data['address']}</p>
-                <p><strong>Phone:</strong> {data['gsm']}</p>
-                <p><strong>Email:</strong> {data['email']}</p>
-              </body>
-            </html>
-        """
-        send_mail(
-            to_whom=blood_request["email_address"],
-            subject="Donor Found!!!", body=mail_body
-        )
-    else:
-        response = JsonResponse(
-            data={"message": "donor does not fit requirements"}, status=200
-        )
-
-    return response
+    return JsonResponse(data=questions, status=200)
 
 
 @api_view(['POST'])
-def donate_to_blood_request_draft(request, blood_request_id):
+def validate_donation(request, blood_request_id):
+    client = _get_db()
+    data = json.loads(request.body)
+    coll = client.get_collection("blood_requests")
+    blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
+    blood_product_type = blood_request["blood_product_type"]
+    coll = client.get_collection("validation")
+    validation = coll.find({"blood_product_type": blood_product_type}).next()
+    questions_answers = {}
+    for key, val in validation.items():
+        if key.startswith("question_") or key.startswith("answer_"):
+            questions_answers[key] = val
+
+    if questions_answers != data:
+        return HttpResponse(content="donor not fit requirements", status=409)
+
+    return HttpResponse(status=200)
+
+
+@api_view(['POST'])
+def donate_to_blood_request(request, blood_request_id):
     client = _get_db()
     coll = client.get_collection("blood_requests")
     blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
