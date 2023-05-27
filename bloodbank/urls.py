@@ -47,4 +47,9 @@ urlpatterns = [
         views.validate_to_blood_request,
         name="get validation for blood request"
     ),
+    path('login/',
+         views.loginPage,
+         name = "login page"
+         ),
+
 ]

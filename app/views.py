@@ -35,6 +35,91 @@ def _get_db() -> Database:
     return client.get_database("test")
 
 
+def loginPage(request):
+    if request.method == 'POST':
+        email = request.POST.get('email').lower()
+        password = request.POST.get('password')
+        user_document = _get_db().get_collection("users").find({"email": email})
+        if user_document is not None:
+            real_password = user_document.next()["password"]
+            if real_password == password:
+                response = JsonResponse( data={"message": "Log in successful. Redirecting main page..."}, status=200)
+            else:
+                response = JsonResponse(
+                    data={"message": "Password is wrong."}, status=200
+                )
+        else:
+            response = JsonResponse(data={"message": "E-mail is invalid."}, status=200)
+        return response
+
+def register_user(request):
+    from django.utils.dateparse import parse_date
+    if request.method == 'POST':
+        email = request.POST.get('email').lower()
+        all_users = _get_db().get_collection("users")
+        user_document = all_users.find({"email": email})
+        if user_document is not None:
+            response = JsonResponse(
+                    data={"message": "E-mail is already registered Try login."}, status=200
+                )
+            return response
+        password_org = request.POST.get('password_org')
+        password_repeat = request.POST.get('password_repeat')
+        if password_org != password_repeat:
+            response = JsonResponse(
+                    data={"message": "Passwords do not match."}, status=200
+                )
+            return response
+        def str_to_bool(s):
+            if s == 'True':
+                return True
+            elif s == 'False':
+                return False
+            else:
+                raise ValueError  # evil ValueError that doesn't tell you what the wrong value was
+        name = request.POST.get('name')
+        surname = request.POST.get('surname')
+        date_of_birth = parse_date(request.POST.get('date_of_birth')) ##date = datetime(1996, 2, 1)
+        blood_group = request.POST.get('blood_group')
+        phone = int(request.POST.get('phone'))
+
+        city = request.POST.get('city')
+        county = request.POST.get('county')
+        street = request.POST.get('street')
+        zip_code = int( request.POST.get('zip_code'))
+        address = request.POST.get('address')
+        nearby_email = str_to_bool(request.POST.get('nearby_email'))
+        nearby_message = str_to_bool(request.POST.get('nearby_message'))
+        donation_warning = str_to_bool(request.POST.get('donation_warning'))
+
+        new_preference = {
+            "nearby_email": nearby_email,
+            "nearby_message": nearby_message,
+            "donation_warning": donation_warning
+        }
+        all_preferences = _get_db().get_collection("preferences")
+        pref_doc = all_preferences.insert_one(new_preference)
+
+
+
+        new_user = {
+            "name": name,
+            "surname": surname,
+            "date_of_birth": date_of_birth,
+            "blood_group": blood_group,
+            "phone": phone,
+            "email": email,
+            "password": password_org,
+            "city": city,
+            "county": county,
+            "street": street,
+            "zip_code": zip_code,
+            "address": address,
+            "preference_id": pref_doc.get["_id"].__str__()
+
+        }
+        all_users.insert_one(new_user)
+
 def send_mail(
         to_whom: Union[str, List[str]], subject: str, body: str,
         username: str = "blooddonationhelper@hotmail.com",
