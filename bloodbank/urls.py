@@ -79,9 +79,9 @@ urlpatterns = [
         name="user updates phone"
     ),
     path(
-        'api/user/city_district_phone',
-        views.user_update_city_district_phone,
-        name="user updates city district and phone"
+        'api/user/update_info',
+        views.user_update_info,
+        name="user updates any user attribute"
     ),
     path(
         'api/user/subscribe',
@@ -109,13 +109,13 @@ urlpatterns = [
         name="update any attribute of a blood request"
     ),
     path(
-        'api/user/blood_requests/<str:blood_request_id>/decrease',
-        views.user_blood_request_details_decrease_unit,
+        'api/user/decrease_unit',
+        views.user_decrease_blood_request_unit,
         name="decrease blood request unit by 1"
     ),
     path(
-        'api/user/blood_requests/<str:blood_request_id>/increase',
-        views.user_blood_request_details_increase_unit,
+        'api/user/increase_unit',
+        views.user_increase_blood_request_unit,
         name="increase blood request unit by 1"
     ),
     path(
