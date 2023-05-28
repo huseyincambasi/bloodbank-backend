@@ -18,6 +18,11 @@ from django.http import HttpResponse, JsonResponse
 
 from rest_framework.decorators import api_view
 
+import hashlib
+from django_jwt_extended import create_access_token
+from django_jwt_extended import create_refresh_token
+from django_jwt_extended import jwt_required, get_jwt_identity
+
 # HELPER FUNCTIONS START
 
 
@@ -84,49 +89,42 @@ def index(request):
 @api_view(['POST'])
 def register(request):
     db = _get_db()
-    coll = db.get_collection("users")
-    data = json.loads(request.body)
-    email = data["email"]
-    password = data["password"]
-    name = data["name"]
-    surname = data["surname"]
-    blood_group = data["blood_group"]
-    user_iter = coll.find({"email": email})
-    if len(password) < 8:
-        return HttpResponse(
-            content="password must be longer than 8 chars",
-            status=409
-        )
-    try:
-        user_iter.next()
-        return HttpResponse(content="user exists", status=409)
-    except StopIteration:
-        coll.insert_one(
-            {"name": name, "surname": surname, "email": email,
-             "password": password, "blood_group": blood_group, "notification": 0,
-             "city": None, "district": None, "donation_date": None, "phone": None}
-        )
-        return HttpResponse(status=200)
+    users_collection = db.get_collection("users")
+    new_user = json.loads(json.dumps(request.POST))
+    new_user['password'] = hashlib.sha256(new_user['password'].encode('utf-8')).hexdigest()
+    doc = users_collection.find_one({'email': new_user['email']})
+
+    if not doc:
+        users_collection.insert_one(new_user)
+        del new_user['password']
+        new_user['_id'] = str(new_user['_id'])
+        return JsonResponse(data=new_user, status=201, safe=False)
+    else:
+        return JsonResponse(data={'error': 'Email address already exists'}, status=409, safe=False)
 
 
 @api_view(['POST'])
 def login(request):
     db = _get_db()
-    coll = db.get_collection("users")
-    data = json.loads(request.body)
-    email = data["email"]
-    password = data["password"]
-    user_iter = coll.find({"email": email})
-    try:
-        user = user_iter.next()
-    except StopIteration:
-        return HttpResponse(content="user not found", status=409)
+    users_collection = db.get_collection("users")
+    login_details = json.loads(request.body)
+    user_from_db = users_collection.find_one({'email': login_details['email']})
 
-    if password == user["password"]:
-        request.session["user"] = user["email"]
-        return HttpResponse(status=200)
-    else:
-        return HttpResponse(content="password not true", status=409)
+    if user_from_db:
+        encrpted_password = hashlib.sha256(login_details['password'].encode('utf-8')).hexdigest()
+        if encrpted_password == user_from_db['password']:
+            del user_from_db['password']
+            user_from_db['_id'] = str(user_from_db['_id'])
+            return JsonResponse(
+                data={
+                    "access_token": create_access_token(identity=user_from_db['email']),
+                    'refresh_token': create_refresh_token(identity=user_from_db['email']),
+                    'user': user_from_db
+                },
+                status=200,
+                safe=False
+            );
+    return JsonResponse(data={'error': 'Incorrect email address or password'}, status=401, safe=False)
 
 
 @api_view(['POST'])
@@ -205,9 +203,10 @@ def logout(request):
 
 
 @api_view(['GET'])
+@jwt_required()
 def user_info(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
     except KeyError:
@@ -354,27 +353,20 @@ def user_subscribe_or_unsubscribe(request):
 
 
 @api_view(['POST'])
+@jwt_required()
 def user_add_blood_request(request):
-    try:
-        email = request.session["user"]
-        if not email:
-            return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
-        return HttpResponse(content="user not logged in", status=401)
-
     client = _get_db()
     blood_requests_coll = client["blood_requests"]
     users_coll = client["users"]
-    requester = users_coll.find({"email": email}).next()
-    data = json.loads(request.body)
-    data["email"] = requester["email"]
-    data["name"] = requester["name"]
-    data["surname"] = requester["surname"]
-    data["phone"] = requester["phone"]
-    result = blood_requests_coll.insert_one(data)
 
+    email = get_jwt_identity(request)
+    user = users_coll.find_one({"email": email})
+    bloodRequest = json.loads(request.body)
+    bloodRequest['userId'] = str(user["_id"])
+    result = blood_requests_coll.insert_one(bloodRequest)
+        
     inserted_id = str(result.inserted_id)
-    url = f"https://bloodbank-qx6x.onrender.com/bloodrequest/{inserted_id}/"
+    url = "https://bloodbank-qx6x.onrender.com/bloodrequest/{inserted_id}/"
     users_iter = users_coll.find(
         {"city": data["city"],
          "district": data["district"],
@@ -406,14 +398,10 @@ def user_add_blood_request(request):
 
 
 @api_view(['GET'])
+@jwt_required()
 def user_blood_requests(request):
-    try:
-        email = request.session["user"]
-        if not email:
-            return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
-        return HttpResponse(content="user not logged in", status=401)
-
+    email = get_jwt_identity(request)
+    
     db = _get_db()
     coll = db.get_collection("blood_requests")
     blood_requests = coll.find({"email": email})  # get requests of user
@@ -453,9 +441,10 @@ def user_blood_request_details(request, blood_request_id):
 
 
 @api_view(['PUT'])
+@jwt_required()
 def user_blood_request_details_update(request, blood_request_id):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
     except KeyError:
@@ -472,9 +461,10 @@ def user_blood_request_details_update(request, blood_request_id):
 
 
 @api_view(['PATCH'])
+@jwt_required()
 def user_blood_request_details_decrease_unit(request, blood_request_id):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
     except KeyError:
@@ -493,9 +483,10 @@ def user_blood_request_details_decrease_unit(request, blood_request_id):
 
 
 @api_view(['PATCH'])
+@jwt_required()
 def user_blood_request_details_increase_unit(request, blood_request_id):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
     except KeyError:
@@ -511,9 +502,10 @@ def user_blood_request_details_increase_unit(request, blood_request_id):
 
 
 @api_view(['DELETE'])
+@jwt_required()
 def user_blood_request_details_delete(request, blood_request_id):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
     except KeyError:
@@ -536,20 +528,8 @@ def get_blood_requests(request):
     blood_requests = coll.find()  # get all requests
     blood_requests_resp = []
     for blood_request in blood_requests:
-        blood_requests_resp.append(
-            {
-                "_id": str(blood_request["_id"]),
-                "name": blood_request["name"],
-                "surname": blood_request["surname"],
-                "blood_product_type": blood_request["blood_product_type"],
-                "blood_group": blood_request["blood_group"],
-                "city": blood_request["city"],
-                "district": blood_request["district"],
-                "phone": blood_request["phone"],
-                "email": blood_request["email"],
-                "unit": blood_request["unit"]
-            }
-        )
+        blood_request["_id"] = str(blood_request["_id"]);
+        blood_requests_resp.append(blood_request)
     return JsonResponse(data=blood_requests_resp, status=200, safe=False)
 
 

@@ -26,12 +26,12 @@ urlpatterns = [
         name="return user info if logged in, else return null"
     ),
     path(
-        'api/register',
+        'api/register/',
         views.register,
         name="registers user"
     ),
     path(
-        'api/login',
+        'api/login/',
         views.login,
         name="logs in user"
     ),
@@ -96,7 +96,7 @@ urlpatterns = [
         name="add blood request"
     ),
     path(
-        'api/user/blood_requests/',
+        'api/user/blood_requests',
         views.user_blood_requests,
         name="get all blood requests belong to the user"
     ),
@@ -106,22 +106,22 @@ urlpatterns = [
         name="fetch all attributes of an blood_request"
     ),
     path(
-        'api/user/blood_requests/<str:blood_request_id>/update',
+        'api/user/blood_requests/<str:blood_request_id>/update/',
         views.user_blood_request_details_update,
         name="update any attribute of a blood request"
     ),
     path(
-        'api/user/blood_requests/<str:blood_request_id>/decrease',
+        'api/user/blood_requests/<str:blood_request_id>/decrease/',
         views.user_blood_request_details_decrease_unit,
         name="decrease blood request unit by 1"
     ),
     path(
-        'api/user/blood_requests/<str:blood_request_id>/increase',
+        'api/user/blood_requests/<str:blood_request_id>/increase/',
         views.user_blood_request_details_increase_unit,
         name="increase blood request unit by 1"
     ),
     path(
-        'api/user/blood_requests/<str:blood_request_id>/delete',
+        'api/user/blood_requests/<str:blood_request_id>/delete/',
         views.user_blood_request_details_delete,
         name="delete blood request"
     ),
