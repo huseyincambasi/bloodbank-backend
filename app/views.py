@@ -1,6 +1,7 @@
 from typing import List, Union
 from functools import lru_cache
 import certifi
+import hashlib
 from bson import ObjectId
 import json
 from datetime import timedelta, date
@@ -17,6 +18,10 @@ from pymongo.database import Database
 from django.http import HttpResponse, JsonResponse
 
 from rest_framework.decorators import api_view
+from django_jwt_extended.exceptions import InvalidRequest
+from django_jwt_extended import create_access_token
+from django_jwt_extended import create_refresh_token
+from django_jwt_extended import get_jwt_identity
 
 # HELPER FUNCTIONS START
 
@@ -84,49 +89,42 @@ def index(request):
 @api_view(['POST'])
 def register(request):
     db = _get_db()
-    coll = db.get_collection("users")
-    data = json.loads(request.body)
-    email = data["email"]
-    password = data["password"]
-    name = data["name"]
-    surname = data["surname"]
-    blood_group = data["blood_group"]
-    user_iter = coll.find({"email": email})
-    if len(password) < 8:
-        return HttpResponse(
-            content="password must be longer than 8 chars",
-            status=409
-        )
-    try:
-        user_iter.next()
-        return HttpResponse(content="user exists", status=409)
-    except StopIteration:
-        coll.insert_one(
-            {"name": name, "surname": surname, "email": email,
-             "password": password, "blood_group": blood_group, "notification": 0,
-             "city": None, "district": None, "donation_date": None, "phone": None}
-        )
-        return HttpResponse(status=200)
+    users_collection = db.get_collection("users")
+    new_user = json.loads(json.dumps(request.POST))
+    new_user['password'] = hashlib.sha256(new_user['password'].encode('utf-8')).hexdigest()
+    doc = users_collection.find_one({'email': new_user['email']})
+
+    if not doc:
+        users_collection.insert_one(new_user)
+        del new_user['password']
+        new_user['_id'] = str(new_user['_id'])
+        return JsonResponse(data=new_user, status=201, safe=False)
+    else:
+        return JsonResponse(data={'error': 'Email address already exists'}, status=409, safe=False)
 
 
 @api_view(['POST'])
 def login(request):
     db = _get_db()
-    coll = db.get_collection("users")
+    users_collection = db.get_collection("users")
     data = json.loads(request.body)
-    email = data["email"]
-    password = data["password"]
-    user_iter = coll.find({"email": email})
-    try:
-        user = user_iter.next()
-    except StopIteration:
-        return HttpResponse(content="user not found", status=409)
+    user_from_db = users_collection.find_one({'email': data['email']})
 
-    if password == user["password"]:
-        request.session["user"] = user["email"]
-        return HttpResponse(status=200)
-    else:
-        return HttpResponse(content="password not true", status=409)
+    if user_from_db:
+        encrypted_password = hashlib.sha256(data['password'].encode('utf-8')).hexdigest()
+        if encrypted_password == user_from_db['password']:
+            del user_from_db['password']
+            user_from_db['_id'] = str(user_from_db['_id'])
+            return JsonResponse(
+                data={
+                    "access_token": create_access_token(identity=user_from_db['email']),
+                    'refresh_token': create_refresh_token(identity=user_from_db['email']),
+                    'user': user_from_db
+                },
+                status=200,
+                safe=False
+            )
+    return JsonResponse(data={'error': 'Incorrect email address or password'}, status=401, safe=False)
 
 
 @api_view(['POST'])
@@ -169,10 +167,10 @@ def reset_password(request):
 @api_view(['POST'])
 def update_password(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     db = _get_db()
@@ -180,16 +178,12 @@ def update_password(request):
     user_iter = coll.find({"email": email})
     user = user_iter.next()
     data = json.loads(request.body)
-    password = data["password"]
+    password = hashlib.sha256(data['password'].encode('utf-8')).hexdigest()
     new_password = data["new_password"]
 
     if password != user["password"]:
         return HttpResponse(content="password not true", status=409)
-    if len(new_password) < 8:
-        return HttpResponse(
-            content="password must be longer than 8 chars",
-            status=409
-        )
+    
     coll.update_one(
         filter={"email": email}, upsert=True,
         update={"$set": {"password": new_password}}
@@ -207,10 +201,10 @@ def logout(request):
 @api_view(['GET'])
 def user_info(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     client = _get_db()
@@ -224,10 +218,10 @@ def user_info(request):
 @api_view(['POST'])
 def user_update_donation_date(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     data = json.loads(request.body)
@@ -243,10 +237,10 @@ def user_update_donation_date(request):
 @api_view(['POST'])
 def user_update_city(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     data = json.loads(request.body)
@@ -262,10 +256,10 @@ def user_update_city(request):
 @api_view(['POST'])
 def user_update_district(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     data = json.loads(request.body)
@@ -281,10 +275,10 @@ def user_update_district(request):
 @api_view(['POST'])
 def user_update_phone(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     data = json.loads(request.body)
@@ -297,26 +291,26 @@ def user_update_phone(request):
     return HttpResponse(status=200)
 
 
-@api_view(['POST'])
-def user_update_city_district_phone(request):
+@api_view(['PUT'])
+def user_update_info(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     data = json.loads(request.body)
     client = _get_db()
     coll = client.get_collection("users")
+    keys = list(data.keys())
+    for key in keys:
+        if key in ["email", "password"]:
+            data.pop(key)
     coll.update_one(
         filter={"email": email}, upsert=True,
         update={
-            "$set": {
-                "city": data["city"],
-                "district": data["district"],
-                "phone": data["phone"]
-            }
+            "$set": data
         }
     )
     return HttpResponse(status=200)
@@ -325,10 +319,10 @@ def user_update_city_district_phone(request):
 @api_view(['POST'])
 def user_subscribe_or_unsubscribe(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     client = _get_db()
@@ -356,10 +350,10 @@ def user_subscribe_or_unsubscribe(request):
 @api_view(['POST'])
 def user_add_blood_request(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     client = _get_db()
@@ -408,10 +402,10 @@ def user_add_blood_request(request):
 @api_view(['GET'])
 def user_blood_requests(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     db = _get_db()
@@ -439,10 +433,10 @@ def user_blood_requests(request):
 @api_view(['GET'])
 def user_blood_request_details(request, blood_request_id):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     client = _get_db()
@@ -455,10 +449,10 @@ def user_blood_request_details(request, blood_request_id):
 @api_view(['PUT'])
 def user_blood_request_details_update(request, blood_request_id):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     client = _get_db()
@@ -472,51 +466,59 @@ def user_blood_request_details_update(request, blood_request_id):
 
 
 @api_view(['PATCH'])
-def user_blood_request_details_decrease_unit(request, blood_request_id):
+def user_decrease_blood_request_unit(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     client = _get_db()
     coll = client.get_collection("blood_requests")
+    data = json.loads(request.body)
+    blood_request = coll.find({"_id": ObjectId(data["blood_request_id"])}).next()
+    unit = blood_request["unit"]
+    if unit == 1:
+        return HttpResponse(content="cannot decrease, please delete", status=409)
+
     coll.update_one(
-        filter={"_id": ObjectId(blood_request_id)}, upsert=True,
+        filter={"_id": ObjectId(data["blood_request_id"])}, upsert=True,
         update={'$inc': {'unit': -1}}
     )
-    blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
-    if blood_request["unit"] < 1:
-        coll.delete_one({'_id': ObjectId(blood_request_id)})
-    return HttpResponse(status=200)
+    unit -= 1
+    return JsonResponse(data={"unit": unit}, status=200)
 
 
 @api_view(['PATCH'])
-def user_blood_request_details_increase_unit(request, blood_request_id):
+def user_increase_blood_request_unit(request):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     client = _get_db()
     coll = client.get_collection("blood_requests")
+    data = json.loads(request.body)
+    blood_request = coll.find({"_id": ObjectId(data["blood_request_id"])}).next()
+    unit = blood_request["unit"]
     coll.update_one(
-        filter={"_id": ObjectId(blood_request_id)}, upsert=True,
+        filter={"_id": ObjectId(data["blood_request_id"])}, upsert=True,
         update={'$inc': {'unit': 1}}
     )
-    return HttpResponse(status=200)
+    unit += 1
+    return JsonResponse(data={"unit": unit}, status=200)
 
 
 @api_view(['DELETE'])
 def user_blood_request_details_delete(request, blood_request_id):
     try:
-        email = request.session["user"]
+        email = get_jwt_identity(request)
         if not email:
             return HttpResponse(content="user not logged in", status=401)
-    except KeyError:
+    except InvalidRequest:
         return HttpResponse(content="user not logged in", status=401)
 
     client = _get_db()
