@@ -22,6 +22,7 @@ from django_jwt_extended.exceptions import InvalidRequest
 from django_jwt_extended import create_access_token
 from django_jwt_extended import create_refresh_token
 from django_jwt_extended import get_jwt_identity
+from django_jwt_extended import jwt_required
 
 # HELPER FUNCTIONS START
 
@@ -90,7 +91,7 @@ def index(request):
 def register(request):
     db = _get_db()
     users_collection = db.get_collection("users")
-    new_user = json.loads(json.dumps(request.POST))
+    new_user = json.loads(request.body)
     new_user['password'] = hashlib.sha256(new_user['password'].encode('utf-8')).hexdigest()
     doc = users_collection.find_one({'email': new_user['email']})
 
@@ -199,6 +200,7 @@ def logout(request):
 
 
 @api_view(['GET'])
+@jwt_required()
 def user_info(request):
     try:
         email = get_jwt_identity(request)
@@ -292,20 +294,15 @@ def user_update_phone(request):
 
 
 @api_view(['PUT'])
+@jwt_required()
 def user_update_info(request):
-    try:
-        email = get_jwt_identity(request)
-        if not email:
-            return HttpResponse(content="user not logged in", status=401)
-    except InvalidRequest:
-        return HttpResponse(content="user not logged in", status=401)
-
+    email = get_jwt_identity(request)
     data = json.loads(request.body)
     client = _get_db()
     coll = client.get_collection("users")
     keys = list(data.keys())
     for key in keys:
-        if key in ["email", "password"]:
+        if key in ["email", "password", "_id"]:
             data.pop(key)
     coll.update_one(
         filter={"email": email}, upsert=True,
@@ -313,7 +310,7 @@ def user_update_info(request):
             "$set": data
         }
     )
-    return HttpResponse(status=200)
+    return JsonResponse(data={"user":data}, status=200, safe=False)
 
 
 @api_view(['POST'])
@@ -348,6 +345,7 @@ def user_subscribe_or_unsubscribe(request):
 
 
 @api_view(['POST'])
+@jwt_required()
 def user_add_blood_request(request):
     try:
         email = get_jwt_identity(request)
@@ -362,9 +360,6 @@ def user_add_blood_request(request):
     requester = users_coll.find({"email": email}).next()
     data = json.loads(request.body)
     data["email"] = requester["email"]
-    data["name"] = requester["name"]
-    data["surname"] = requester["surname"]
-    data["phone"] = requester["phone"]
     result = blood_requests_coll.insert_one(data)
 
     inserted_id = str(result.inserted_id)
@@ -372,7 +367,9 @@ def user_add_blood_request(request):
     users_iter = users_coll.find(
         {"city": data["city"],
          "district": data["district"],
-         "blood_group": data["blood_group"]}
+         "bloodGroup": data["blood_group"],
+         "newRequestNotification": 1,
+        }
     )
     mail_body = f"""
         <html>
@@ -381,7 +378,7 @@ def user_add_blood_request(request):
           </head>
           <body>
             <h1> {data['name']} {data['surname']} needs your help!</h1>
-            <p><strong>Address:</strong> {data['address']}</p>
+            <p><strong>Address:</strong> {data['city']} - {data['district']}</p>
             <p><strong>Phone:</strong> {data['phone']}</p>
             <p><strong>Email:</strong> {data['email']}</p>
             <a href={url}>Visit Blood Request!</a> 
@@ -400,6 +397,7 @@ def user_add_blood_request(request):
 
 
 @api_view(['GET'])
+@jwt_required()
 def user_blood_requests(request):
     try:
         email = get_jwt_identity(request)
@@ -446,18 +444,16 @@ def user_blood_request_details(request, blood_request_id):
     return JsonResponse(data=blood_request, status=200)
 
 
-@api_view(['PUT'])
+@api_view(['POST'])
+@jwt_required()
 def user_blood_request_details_update(request, blood_request_id):
-    try:
-        email = get_jwt_identity(request)
-        if not email:
-            return HttpResponse(content="user not logged in", status=401)
-    except InvalidRequest:
-        return HttpResponse(content="user not logged in", status=401)
-
     client = _get_db()
     coll = client.get_collection("blood_requests")
     data = json.loads(request.body)
+    keys = list(data.keys())
+    for key in keys:
+        if key in ["email", "_id"]:
+            data.pop(key)
     coll.update_one(
         filter={"_id": ObjectId(blood_request_id)}, upsert=True,
         update={"$set": data}
@@ -466,14 +462,8 @@ def user_blood_request_details_update(request, blood_request_id):
 
 
 @api_view(['PATCH'])
+@jwt_required()
 def user_decrease_blood_request_unit(request):
-    try:
-        email = get_jwt_identity(request)
-        if not email:
-            return HttpResponse(content="user not logged in", status=401)
-    except InvalidRequest:
-        return HttpResponse(content="user not logged in", status=401)
-
     client = _get_db()
     coll = client.get_collection("blood_requests")
     data = json.loads(request.body)
@@ -481,7 +471,6 @@ def user_decrease_blood_request_unit(request):
     unit = blood_request["unit"]
     if unit == 1:
         return HttpResponse(content="cannot decrease, please delete", status=409)
-
     coll.update_one(
         filter={"_id": ObjectId(data["blood_request_id"])}, upsert=True,
         update={'$inc': {'unit': -1}}
@@ -491,14 +480,8 @@ def user_decrease_blood_request_unit(request):
 
 
 @api_view(['PATCH'])
+@jwt_required()
 def user_increase_blood_request_unit(request):
-    try:
-        email = get_jwt_identity(request)
-        if not email:
-            return HttpResponse(content="user not logged in", status=401)
-    except InvalidRequest:
-        return HttpResponse(content="user not logged in", status=401)
-
     client = _get_db()
     coll = client.get_collection("blood_requests")
     data = json.loads(request.body)
@@ -513,6 +496,7 @@ def user_increase_blood_request_unit(request):
 
 
 @api_view(['DELETE'])
+@jwt_required()
 def user_blood_request_details_delete(request, blood_request_id):
     try:
         email = get_jwt_identity(request)

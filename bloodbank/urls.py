@@ -89,7 +89,7 @@ urlpatterns = [
         name="user subscribes or unsubscribes to the email list"
     ),
     path(
-        'api/user/add_blood_request/',
+        'api/user/add_blood_request',
         views.user_add_blood_request,
         name="add blood request"
     ),
