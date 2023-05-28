@@ -360,6 +360,7 @@ def user_add_blood_request(request):
     requester = users_coll.find({"email": email}).next()
     data = json.loads(request.body)
     data["email"] = requester["email"]
+    data["unit"] = int(data["unit"])
     result = blood_requests_coll.insert_one(data)
 
     inserted_id = str(result.inserted_id)
@@ -597,15 +598,15 @@ def donate_to_blood_request(request, blood_request_id):
             <meta charset="UTF-8">
           </head>
           <body>
-            <h1>Contact Information for {data['name']} {data['surname']}</h1>
+            <h1>Contact Information for {data['firstName']} {data['lastName']}</h1>
             <p><strong>Address:</strong> {data['address']}</p>
-            <p><strong>Phone:</strong> {data['phone']}</p>
+            <p><strong>Phone:</strong> {data['phoneNumber']}</p>
             <p><strong>Email:</strong> {data['email']}</p>
           </body>
         </html>
     """
     send_mail(
-        to_whom=blood_request["email_address"],
+        to_whom=blood_request["email"],
         subject="Donor Found!!!", body=mail_body
     )
 
