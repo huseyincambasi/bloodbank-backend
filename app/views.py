@@ -557,30 +557,33 @@ def get_validation_questions(request, blood_request_id):
     blood_product_type = blood_request["blood_product_type"]
     coll = client.get_collection("validation")
     validation = coll.find({"blood_product_type": blood_product_type}).next()
-    questions = {}
-    print(validation)
-    for key, val in validation.items():
+    sorted_validation = {key: validation[key] for key in sorted(validation.keys())}
+    questions = []
+    for key, val in sorted_validation.items():
         if key.startswith("question_"):
-            questions[key] = val
+            questions.append({key: val})
 
-    return JsonResponse(data=questions, status=200)
+    return JsonResponse(data=questions, status=200, safe=False)
 
 
 @api_view(['POST'])
 def validate_donation(request, blood_request_id):
     client = _get_db()
     data = json.loads(request.body)
+    right_answers = data["answers"]
+
     coll = client.get_collection("blood_requests")
     blood_request = coll.find({"_id": ObjectId(blood_request_id)}).next()
     blood_product_type = blood_request["blood_product_type"]
     coll = client.get_collection("validation")
     validation = coll.find({"blood_product_type": blood_product_type}).next()
-    questions_answers = {}
-    for key, val in validation.items():
-        if key.startswith("question_") or key.startswith("answer_"):
-            questions_answers[key] = val
+    sorted_validation = {key: validation[key] for key in sorted(validation.keys())}
+    left_answers = []
+    for key, val in sorted_validation.items():
+        if key.startswith("answer_"):
+            left_answers.append({key: val})
 
-    if questions_answers != data:
+    if left_answers != right_answers:
         return HttpResponse(content="donor not fit requirements", status=409)
 
     return HttpResponse(status=200)

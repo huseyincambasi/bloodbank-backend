@@ -134,12 +134,12 @@ urlpatterns = [
         name="fetch all attributes of an blood_request"
     ),
     path(
-        'api/blood_requests/<str:blood_request_id>/questions/',
+        'api/blood_request/<str:blood_request_id>/questions/',
         views.get_validation_questions,
         name="get validation questions"
     ),
     path(
-        'api/blood_requests/<str:blood_request_id>/validate',
+        'api/blood_request/<str:blood_request_id>/validate',
         views.validate_donation,
         name="checks if donor fits requirements"
     ),
