@@ -24,6 +24,7 @@ from django_jwt_extended import create_refresh_token
 from django_jwt_extended import get_jwt_identity
 from django_jwt_extended import jwt_required
 
+
 # HELPER FUNCTIONS START
 
 
@@ -184,7 +185,7 @@ def update_password(request):
 
     if password != user["password"]:
         return HttpResponse(content="password not true", status=409)
-    
+
     coll.update_one(
         filter={"email": email}, upsert=True,
         update={"$set": {"password": new_password}}
@@ -214,7 +215,6 @@ def user_info(request):
     user = coll.find({"email": email}).next()
     user["_id"] = str(user["_id"])
     return JsonResponse(data=user, status=200, safe=False)
-
 
 
 @api_view(['POST'])
@@ -310,7 +310,7 @@ def user_update_info(request):
             "$set": data
         }
     )
-    return JsonResponse(data={"user":data}, status=200, safe=False)
+    return JsonResponse(data={"user": data}, status=200, safe=False)
 
 
 @api_view(['POST'])
@@ -364,13 +364,13 @@ def user_add_blood_request(request):
     result = blood_requests_coll.insert_one(data)
 
     inserted_id = str(result.inserted_id)
-    url = f"https://bloodbank-qx6x.onrender.com/bloodrequest/{inserted_id}/"
+    url = f"https://bloodbank-qx6x.onrender.com/view-request/{inserted_id}/"
     users_iter = users_coll.find(
         {"city": data["city"],
          "district": data["district"],
-         "bloodGroup": data["blood_group"],
-         "newRequestNotification": 1,
-        }
+         "blood_group": data["blood_group"],
+         "notification": True,
+         }
     )
     mail_body = f"""
         <html>
@@ -455,6 +455,7 @@ def user_blood_request_details_update(request, blood_request_id):
     for key in keys:
         if key in ["email", "_id"]:
             data.pop(key)
+    data["unit"] = int(data["unit"])
     coll.update_one(
         filter={"_id": ObjectId(blood_request_id)}, upsert=True,
         update={"$set": data}
