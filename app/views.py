@@ -455,7 +455,10 @@ def user_blood_request_details_update(request, blood_request_id):
     for key in keys:
         if key in ["email", "_id"]:
             data.pop(key)
-    data["unit"] = int(data["unit"])
+
+    if "unit" in keys:
+        data["unit"] = int(data["unit"])
+
     coll.update_one(
         filter={"_id": ObjectId(blood_request_id)}, upsert=True,
         update={"$set": data}
